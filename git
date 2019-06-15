@@ -1,0 +1,47 @@
+#!/usr/bin/env fish
+
+function _ghq_path
+    echo pwd | ghq look $argv | tail -n1
+end
+
+set -l orig /usr/bin/git
+
+if ps -o cmd= | grep -q '^ghq'
+    exec $orig $argv
+end
+
+if test (count $argv) -lt 2 || test (count $argv) -gt 3
+    exec $orig $argv
+end
+
+set -l pargs
+for arg in $argv
+    switch $arg
+    case '-*'
+        continue
+    case '*'
+        set pargs $pargs $arg
+    end
+end
+
+if test $pargs[1] != clone
+    exec $orig $argv
+end
+
+set -l repo $pargs[2]
+set -l dir
+if test (count $pargs) = 3
+    set dir $pargs[3]
+else
+    set dir (basename $repo)
+end
+
+echo "Cloning $repo into $dir..."
+
+ghq get $repo
+and echo "Creating symbolic link from "(_ghq_path $repo)" to $dir"
+and if test -d $dir
+    rm -d $dir
+    or exit 1
+end
+and ln -Ts (_ghq_path $repo) $dir
